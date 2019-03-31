@@ -31,22 +31,19 @@ func main() {
 		os.Mkdir(outdir, os.ModePerm)
 
 		for key, value := range files {
-			m := make(map[interface{}]interface{})
+
+			var m KubernetesAPI
 
 			err := yaml.Unmarshal([]byte(value), &m)
 			check(err)
-			k := m["kind"]
 
-			if k == nil {
+			if m.Kind == "" {
 				fmt.Println("yaml file with no kind")
 			} else {
-				kind := k.(string)
 
-				fmt.Println("File: ", key, kind)
-				metadata := m["metadata"].(map[interface{}]interface{})
-				name := metadata["name"].(string)
+				fmt.Println("File: ", key, m.Kind)
 
-				filename := outdir + name + "-" + kind + ".yaml"
+				filename := outdir + m.Metadata.Name + "-" + m.Kind + ".yaml"
 				fmt.Println(filename)
 
 				f, err := os.Create(filename)
