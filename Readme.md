@@ -1,5 +1,8 @@
 # kubernetes-split-yaml
 
+[![CircleCI](https://circleci.com/gh/mogensen/kubernetes-split-yaml.svg?style=svg)](https://circleci.com/gh/mogensen/kubernetes-split-yaml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/mogensen/kubernetes-split-yaml)](https://goreportcard.com/report/github.com/mogensen/kubernetes-split-yaml)
+
 Split the 'giant yaml file' into one file pr kubernetes resource
 
 ## Installation
