@@ -4,24 +4,23 @@ jobs:
   build:
     docker:
       # specify the version
-      - image: circleci/golang:1.9
-
-    working_directory: /go/src/github.com/mogensen/kubernetes-split-yaml
+      - image: circleci/golang:1.12
     steps:
       - checkout
-
-      - run: go get -v -t -d ./...
+      # - run: go get -v -t -d ./...
       # - run: go test -v ./...
       - run: go build
   release:
     docker:
-      - image: circleci/golang:1.10
-    working_directory: /go/src/github.com/mogensen/kubernetes-split-yaml
+      - image: circleci/golang:1.12
     steps:
       - checkout
       - run: curl -sL https://git.io/goreleaser | bash
 workflows:
   version: 2
+  commit:
+    jobs:
+      - build
   release:
     jobs:
       - release:
