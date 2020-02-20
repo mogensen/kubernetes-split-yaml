@@ -2,23 +2,19 @@ package main
 
 import (
 	"bufio"
-	"fmt"
 	"io"
-	"log"
+
 	"os"
 	"strings"
 
-	"gopkg.in/urfave/cli.v1"
+	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli/v2"
 	"gopkg.in/yaml.v2"
 )
 
-func check(e error) {
-	if e != nil {
-		panic(e)
-	}
-}
-
 const outdir = "generated/"
+
+var log = logrus.New()
 
 func main() {
 	app := cli.NewApp()
@@ -30,28 +26,42 @@ func main() {
 
 		os.Mkdir(outdir, os.ModePerm)
 
-		for key, value := range files {
+		for _, fileContent := range files {
 
 			var m KubernetesAPI
 
-			err := yaml.Unmarshal([]byte(value), &m)
-			check(err)
+			// Start by removing all lines with templating in to create sane yaml
+			cleanYaml := ""
+			for _, line := range strings.Split(fileContent, "\n") {
+				if !strings.Contains(line, "{{") {
+					cleanYaml += line + "\n"
+				}
+			}
+
+			err := yaml.Unmarshal([]byte(cleanYaml), &m)
+			if err != nil {
+				log.Fatalf("Could not unmarshal: %v \n---\n%v", err, fileContent)
+			}
 
 			if m.Kind == "" {
-				fmt.Println("yaml file with no kind")
+				log.Warn("yaml file with no kind - Ignoring")
 			} else {
 
-				fmt.Println("File: ", key, m.Kind)
+				name := m.Metadata.Name + "-" + getShortName(m.Kind) + ".yaml"
+				filename := outdir + name
 
-				filename := outdir + m.Metadata.Name + "-" + m.Kind + ".yaml"
-				fmt.Println(filename)
+				log.Infof("Creating file: %s", filename)
 
 				f, err := os.Create(filename)
-				check(err)
+				if err != nil {
+					log.Fatalf("Failed creating file %s : %v", filename, err)
+				}
 				defer f.Close()
 
-				_, err = f.WriteString(value)
-				check(err)
+				_, err = f.WriteString(fileContent)
+				if err != nil {
+					log.Fatalf("Failed writing file %s : %v", filename, err)
+				}
 			}
 		}
 
@@ -59,19 +69,24 @@ func main() {
 	}
 
 	err := app.Run(os.Args)
-	check(err)
+	if err != nil {
+		log.Fatalf("Error running: %v", err)
+	}
 }
 
-func readAndSplitFile(logfile string) map[int]string {
+func readAndSplitFile(file string) []string {
 
-	f, err := os.OpenFile(logfile, os.O_RDONLY, os.ModePerm)
-	check(err)
+	f, err := os.OpenFile(file, os.O_RDONLY, os.ModePerm)
+	if err != nil {
+		log.Fatalf("Failed reading file %s : %v", file, err)
+	}
 
 	defer f.Close()
 
 	rd := bufio.NewReader(f)
-	c := make(map[int]string)
-	count := 0
+	c := []string{}
+
+	current := ""
 
 	for {
 		line, err := rd.ReadString('\n')
@@ -83,9 +98,10 @@ func readAndSplitFile(logfile string) map[int]string {
 		}
 		prettyline := strings.TrimSpace(line)
 		if prettyline == "---" {
-			count++
+			c = append(c, current)
+			current = ""
 		} else {
-			c[count] += line
+			current += line
 		}
 	}
 	return c
