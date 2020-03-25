@@ -9,7 +9,6 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
-	"gopkg.in/yaml.v2"
 )
 
 const outdir = "generated/"
@@ -39,33 +38,19 @@ func handleFile(file string, outputDir string) {
 
 	for _, fileContent := range files {
 
-		// Start by removing all lines with templating in to create sane yaml
-		cleanYaml := ""
-		for _, line := range strings.Split(fileContent, "\n") {
-			if !strings.Contains(line, "{{") {
-				cleanYaml += line + "\n"
-			}
-		}
-
-		var m KubernetesAPI
-		err := yaml.Unmarshal([]byte(cleanYaml), &m)
+		kind, metadataName, err := getYamlInfo(fileContent)
 		if err != nil {
-			log.Fatalf("Could not unmarshal: %v \n---\n%v", err, fileContent)
+			log.Warnf("Ignoring %v", err)
 		}
 
-		if m.Kind == "" {
-			log.Warn("yaml file with no kind - Ignoring")
-		} else {
+		name := metadataName + "-" + getShortName(kind) + ".yaml"
+		filename := filepath.Join(outputDir, name)
 
-			name := m.Metadata.Name + "-" + getShortName(m.Kind) + ".yaml"
-			filename := filepath.Join(outputDir, name)
+		log.Infof("Creating file: %s", filename)
 
-			log.Infof("Creating file: %s", filename)
-
-			err := ioutil.WriteFile(filename, []byte(fileContent), os.ModePerm)
-			if err != nil {
-				log.Fatalf("Failed creating file %s : %v", filename, err)
-			}
+		err = ioutil.WriteFile(filename, []byte(fileContent), os.ModePerm)
+		if err != nil {
+			log.Fatalf("Failed creating file %s : %v", filename, err)
 		}
 	}
 }
@@ -78,10 +63,16 @@ func readAndSplitFile(file string) []string {
 	}
 
 	docs := strings.Split(string(fileContent), "\n---")
+
+	res := []string{}
 	// Trim whitespace in both ends of each yaml docs.
 	// - Re-add a single newline last
-	for i, doc := range docs {
-		docs[i] = strings.TrimSpace(doc) + "\n"
+	for _, doc := range docs {
+		content := strings.TrimSpace(doc)
+		// Ignore empty docs
+		if content != "" {
+			res = append(res, content+"\n")
+		}
 	}
-	return docs
+	return res
 }
