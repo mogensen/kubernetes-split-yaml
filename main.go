@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"io"
+	"path/filepath"
 
 	"os"
 	"strings"
@@ -22,55 +23,57 @@ func main() {
 	app.Usage = "Split the 'giant yaml file' into one file pr kubernetes resource"
 	app.Action = func(c *cli.Context) error {
 
-		files := readAndSplitFile(c.Args().Get(0))
-
-		os.Mkdir(outdir, os.ModePerm)
-
-		for _, fileContent := range files {
-
-			var m KubernetesAPI
-
-			// Start by removing all lines with templating in to create sane yaml
-			cleanYaml := ""
-			for _, line := range strings.Split(fileContent, "\n") {
-				if !strings.Contains(line, "{{") {
-					cleanYaml += line + "\n"
-				}
-			}
-
-			err := yaml.Unmarshal([]byte(cleanYaml), &m)
-			if err != nil {
-				log.Fatalf("Could not unmarshal: %v \n---\n%v", err, fileContent)
-			}
-
-			if m.Kind == "" {
-				log.Warn("yaml file with no kind - Ignoring")
-			} else {
-
-				name := m.Metadata.Name + "-" + getShortName(m.Kind) + ".yaml"
-				filename := outdir + name
-
-				log.Infof("Creating file: %s", filename)
-
-				f, err := os.Create(filename)
-				if err != nil {
-					log.Fatalf("Failed creating file %s : %v", filename, err)
-				}
-				defer f.Close()
-
-				_, err = f.WriteString(fileContent)
-				if err != nil {
-					log.Fatalf("Failed writing file %s : %v", filename, err)
-				}
-			}
-		}
-
+		handleFile(c.Args().Get(0), outdir)
 		return nil
 	}
 
 	err := app.Run(os.Args)
 	if err != nil {
 		log.Fatalf("Error running: %v", err)
+	}
+}
+
+func handleFile(file string, outputDir string) {
+	files := readAndSplitFile(file)
+
+	os.Mkdir(outputDir, os.ModePerm)
+
+	for _, fileContent := range files {
+
+		// Start by removing all lines with templating in to create sane yaml
+		cleanYaml := ""
+		for _, line := range strings.Split(fileContent, "\n") {
+			if !strings.Contains(line, "{{") {
+				cleanYaml += line + "\n"
+			}
+		}
+
+		var m KubernetesAPI
+		err := yaml.Unmarshal([]byte(cleanYaml), &m)
+		if err != nil {
+			log.Fatalf("Could not unmarshal: %v \n---\n%v", err, fileContent)
+		}
+
+		if m.Kind == "" {
+			log.Warn("yaml file with no kind - Ignoring")
+		} else {
+
+			name := m.Metadata.Name + "-" + getShortName(m.Kind) + ".yaml"
+			filename := filepath.Join(outputDir, name)
+
+			log.Infof("Creating file: %s", filename)
+
+			f, err := os.Create(filename)
+			if err != nil {
+				log.Fatalf("Failed creating file %s : %v", filename, err)
+			}
+			defer f.Close()
+
+			_, err = f.WriteString(fileContent)
+			if err != nil {
+				log.Fatalf("Failed writing file %s : %v", filename, err)
+			}
+		}
 	}
 }
 
@@ -90,12 +93,7 @@ func readAndSplitFile(file string) []string {
 
 	for {
 		line, err := rd.ReadString('\n')
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			log.Panicf("read file line error: %v", err)
-		}
+
 		prettyline := strings.TrimSpace(line)
 		if prettyline == "---" {
 			c = append(c, current)
@@ -103,6 +101,13 @@ func readAndSplitFile(file string) []string {
 		} else {
 			current += line
 		}
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			log.Panicf("read file line error: %v", err)
+		}
 	}
+	c = append(c, current)
 	return c
 }

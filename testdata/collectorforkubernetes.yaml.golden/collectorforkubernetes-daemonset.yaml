@@ -1,0 +1,172 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: collectorforkubernetes
+  namespace: collectorforkubernetes
+  labels:
+    app: collectorforkubernetes
+spec:
+  # Default updateStrategy is OnDelete. For collector RollingUpdate is suitable
+  # When you update configuration
+  updateStrategy:
+    type: RollingUpdate
+
+  selector:
+    matchLabels:
+      daemon: collectorforkubernetes
+
+  template:
+    metadata:
+      name: collectorforkubernetes
+      labels:
+        daemon: collectorforkubernetes
+      
+    spec:
+      
+      priorityClassName: collectorforkubernetes-critical
+      
+      dnsPolicy: ClusterFirstWithHostNet
+      hostNetwork: true
+      serviceAccountName: collectorforkubernetes
+      # We run this DaemonSet only for Non-Masters
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/master
+                operator: DoesNotExist
+      tolerations:
+      - operator: "Exists"
+        effect: "NoSchedule"
+      - operator: "Exists"
+        effect: "NoExecute"
+      containers:
+      - name: collectorforkubernetes
+        # Collector version
+        image: docker.io/outcoldsolutions/collectorforkubernetes:5.14.284
+        imagePullPolicy: Always
+        securityContext:
+          runAsUser: 0
+          privileged: true
+        # Define your resources if you need. Defaults should be fine for most.
+        # You can lower or increase based on your hosts.
+        resources:
+          limits:
+            cpu: 2
+            memory: 512Mi
+          requests:
+            cpu: 200m
+            memory: 192Mi
+        env:
+        - name: KUBERNETES_NODENAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        volumeMounts:
+        # We store state in /data folder (file positions)
+        - name: collectorforkubernetes-state
+          mountPath: /data
+        # Configuration file deployed with ConfigMap
+        - name: collectorforkubernetes-config
+          mountPath: /config/
+          readOnly: true
+        # Cgroup filesystem to get metrics
+        - name: cgroup
+          mountPath: /rootfs/sys/fs/cgroup
+          readOnly: true
+        # Proc filesystem to get metrics
+        - name: proc
+          mountPath: /rootfs/proc
+          readOnly: true
+        # Location of docker root (for container logs and metadata)
+        - name: docker-root
+          mountPath: /rootfs/var/lib/docker/
+          readOnly: true
+          mountPropagation: HostToContainer
+        # Docker socket
+        - name: docker-unix-socket
+          mountPath: /rootfs/var/run/docker.sock
+          readOnly: true
+        # CRI-O socket (if using CRI-O runtime)
+        - name: crio-unix-socket
+          mountPath: /rootfs/var/run/crio/
+          readOnly: true
+        # Containerd socket (if using containerd runtime)
+        - name: containerd-unix-socket
+          mountPath: /rootfs/var/run/containerd/
+          readOnly: true
+        # Host logs location (including CRI-O logs)
+        - name: logs
+          mountPath: /rootfs/var/log/
+          readOnly: true
+        - name: run-logs
+          mountPath: /rootfs/run/log/
+          readOnly: true
+        # Application logs
+        - name: volumes-root
+          mountPath: /rootfs/var/lib/kubelet/
+          readOnly: true
+          mountPropagation: HostToContainer
+        # correct timezone
+        - name: localtime
+          mountPath: /etc/localtime
+          readOnly: true
+      volumes:
+      # We store state directly on host, change this location, if
+      # your persistent volume is somewhere else
+      - name: collectorforkubernetes-state
+        hostPath:
+          path: /var/lib/collectorforkubernetes/data/
+      # Location of docker root (for container logs and metadata)
+      - name: docker-root
+        hostPath:
+          path: /var/lib/docker/
+      # Location of cgroups file system
+      - name: cgroup
+        hostPath:
+          path: /sys/fs/cgroup
+      # Location of proc file system
+      - name: proc
+        hostPath:
+          path: /proc
+      # Host logs location (including CRI-O logs)
+      - name: logs
+        hostPath:
+          path: /var/log
+      - name: run-logs
+        hostPath:
+          path: /run/log
+      # Docker socket
+      - name: docker-unix-socket
+        hostPath:
+          path: /var/run/docker.sock
+      # CRI-O socket (if using CRI-O runtime)
+      - name: crio-unix-socket
+        hostPath:
+          path: /var/run/crio/
+      # containerd socket (if using containerd runtime)
+      - name: containerd-unix-socket
+        hostPath:
+          path: /var/run/containerd/
+      # Location for kubelet mounts, to autodiscover application logs
+      - name: volumes-root
+        hostPath:
+          path: /var/lib/kubelet/
+      # correct timezone
+      - name: localtime
+        hostPath:
+          path: /etc/localtime
+      # configuration from ConfigMap
+      - name: collectorforkubernetes-config
+        configMap:
+          name: collectorforkubernetes
+          items:
+          - key: 001-general.conf
+            path: 001-general.conf
+          - key: 002-daemonset.conf
+            path: 002-daemonset.conf

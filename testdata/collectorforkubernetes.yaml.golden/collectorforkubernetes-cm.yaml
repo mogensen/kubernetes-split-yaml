@@ -1,0 +1,1064 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: collectorforkubernetes
+  namespace: collectorforkubernetes
+  labels:
+    app: collectorforkubernetes
+data:
+  001-general.conf: |
+    # The general configuration is used for all deployments
+    #
+    # Run collector with the flag -conf and specify location of the configuration files.
+    #
+    # You can override all the values using environment variables with the format like
+    #   COLLECTOR__<ANYNAME>=<section>__<key>=<value>
+    # As an example you can set dataPath in [general] section as
+    #   COLLECTOR__DATAPATH=general__dataPath=C:\\some\\path\\data.db
+    # This parameter can be configured using -env-override, set it to empty string to disable this feature
+
+    [general]
+
+    # Review EULA https://www.outcoldsolutions.com/docs/license-agreement/
+    # and accept EULA by changing the value to *true*
+    acceptEULA = false
+
+    # Location for the database
+    # Collector stores positions of the files and internal state
+    dataPath = ./data/
+
+    # log level (accepted values are trace, debug, info, warn, error, fatal)
+    logLevel = info
+
+    # http server gives access to two endpoints
+    # /healthz
+    # /metrics
+    httpServerBinding =
+
+    # telemetry report endpoint, set it to empty string to disable telemetry
+    telemetryEndpoint = https://license.outcold.solutions/telemetry/
+
+    # license check endpoint
+    licenseEndpoint = https://license.outcold.solutions/license/
+
+    # license server through proxy
+    licenseServerProxyUrl =
+
+    # authentication with basic authorization (user:password)
+    licenseServerProxyBasicAuth =
+
+    # license key
+    license =
+
+    # Environment variable $KUBERNETES_NODENAME is used by default to setup hostname
+    # Use value below to override specific name
+    hostname =
+
+    # Default output for events, logs and metrics
+    # valid values: splunk and devnull
+    # Use devnull by default if you don't want to redirect data
+    defaultOutput = splunk
+
+    # Default buffer size for file input
+    fileInputBufferSize = 256b
+
+    # Maximum size of one line the file reader can read
+    fileInputLineMaxSize = 1mb
+
+    # Include custom fields to attach to every event, in example below every event sent to Splunk will hav
+    # indexed field my_environment=dev. Fields names should match to ^[a-z][_a-z0-9]*$
+    # Better way to configure that is to specify labels for Kubernetes Nodes.
+    # ; fields.my_environment = dev
+    # Identify the cluster if you are planning to monitor multiple clusters
+    fields.kubernetes_cluster = -
+
+    # Include EC2 Metadata (see list of possible fields https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html)
+    # Should be in format ec2Metadata.{desired_field_name} = {url path to read the value}
+    # ec2Metadata.ec2_instance_id = /latest/meta-data/instance-id
+    # ec2Metadata.ec2_instance_type = /latest/meta-data/instance-type
+
+    # subdomain for the annotations added to the pods, workloads, namespaces or containers, like splunk.collectord.io/..
+    annotationsSubdomain =
+
+    # Configure acknowledgement database.
+    # - force fsync on every write to Write-Ahead-Log
+    db.fsync = false
+    # - maximum size of the Write-Ahead-Log
+    db.compactAt = 1M
+
+    # configure global thruput per second for forwarded logs (metrics are not included)
+    # for example if you set `thruputPerSecond = 512Kb`, that will limit amount of logs forwarded
+    # from the single Collectord instance to 512Kb per second.
+    # You can configure thruput individually for the logs (including specific for container logs) below
+    thruputPerSecond =
+
+    # Configure events that are too old to be forwarded, for example 168h (7 days) - that will drop all events
+    # older than 7 days
+    tooOldEvents =
+
+    # Configure events that are too new to be forwarded, for example 1h - that will drop all events that are 1h in future
+    tooNewEvents =
+
+    # connection to kubernetes api
+    [general.kubernetes]
+
+    # Override service URL for Kubernetes (default is ${KUBERNETES_SERVICE_HOST}:${KUBERNETES_SERVICE_PORT})
+    serviceURL =
+
+    # Environment variable $KUBERNETES_NODENAME is used by default to setup nodeName
+    # Use it only when you need to override it
+    nodeName =
+
+    # Configuration to access the API server,
+    # see https://kubernetes.io/docs/tasks/access-application-cluster/access-cluster/#accessing-the-api-from-a-pod
+    # for details
+    tokenPath = /var/run/secrets/kubernetes.io/serviceaccount/token
+    certPath = /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+
+    # Default timeout for http responses. The streaming/watch requests depend on this timeout.
+    timeout = 30m
+
+    # (obsolete) In case if pod metadata was not retrievied. how often collector should retry to reload the pod metadata
+    # metadataFetchRetry = 5s
+
+    # (obsolete) In case if event is recent, how long pipeline should wait for the metadata to be available in Kubernetes API
+    # metadataFetchWait = 30s
+
+    # How long to keep the cache for the recent calls to API server (to limit number of calls when collector discovers new pods)
+    metadataTTL = 30s
+
+    # regex to find pods
+    podsCgroupFilter = ^/([^/\s]+/)*kubepods(\.slice)?/((kubepods-)?(burstable|besteffort)(\.slice)?/)?([^/]*)pod([0-9a-f]{32}|[0-9a-f\-_]{36})(\.slice)?$
+
+    # regex to find containers in the pods
+    containersCgroupFilter = ^/([^/\s]+/)*kubepods(\.slice)?/((kubepods-)?(burstable|besteffort)(\.slice)?/)?([^/]*)pod([0-9a-f]{32}|[0-9a-f\-_]{36})(\.slice)?/(docker-|crio-)?[0-9a-f]{64}(\.scope)?(\/.+)?$
+
+    # path to the kubelet root location (use it to discover application logs for emptyDir)
+    # the expected format is `pods/{pod-id}/volumes/kubernetes.io~empty-dir/{volume-name}/_data/`
+    volumesRootDir = /rootfs/var/lib/kubelet/
+
+    # You can attach annotations as a metadata, using the format
+    #   includeAnnotations.{key} = {regexp}
+    # For example if you want to include all annotations that starts with `prometheus.io` or `example.com` you can include
+    # the following format:
+    #   includeAnnotations.1 = ^prometheus\.io.*
+    #   includeAnnotations.2 = ^example\.com.*
+
+    # watch for changes (annotations) in the objects
+    watch.namespaces = v1/namespace
+    watch.deployments = apis/v1/deployment
+    watch.configurations = apis/v1/collectord.io/configuration
+
+
+    # watch for pods annotations, setup prometheus collection
+    # for these pods
+    # Addon listens on Pod Network
+    # DaemonSets listen on Host Network
+    [input.prometheus_auto]
+
+    # disable prometheus auto discovery for pods
+    disabled = false
+
+    # override type
+    type = kubernetes_prometheus
+
+    # specify Splunk index
+    index =
+
+    # how often to collect prometheus metrics
+    interval = 60s
+
+    # include metrics help with the events
+    includeHelp = true
+
+    # http client timeout
+    timeout = 30s
+
+    # set output (splunk or devnull, default is [general]defaultOutput)
+    output =
+
+
+    # Splunk output
+    [output.splunk]
+
+    # Splunk HTTP Event Collector url
+    url =
+    # You can specify muiltiple splunk URls with
+    #
+    # urls.0 = https://server1:8088/services/collector/event/1.0
+    # urls.1 = https://server1:8088/services/collector/event/1.0
+    # urls.2 = https://server1:8088/services/collector/event/1.0
+    #
+    # Limitations:
+    # * The urls cannot have different path.
+
+    # Specify how URL should be picked up (in case if multiple is used)
+    # urlSelection = random|round-robin|random-with-round-robin
+    # where:
+    # * random - choose random url on first selection and after each failure (connection or HTTP status code >= 500)
+    # * round-robin - choose url starting from first one and bump on each failure (connection or HTTP status code >= 500)
+    # * random-with-round-robin - choose random url on first selection and after that in round-robin on each
+    #                             failure (connection or HTTP status code >= 500)
+    urlSelection = random-with-round-robin
+
+    # Splunk HTTP Event Collector Token
+    token =
+
+    # Allow invalid SSL server certificate
+    insecure = false
+
+    # Path to CA cerificate
+    caPath =
+
+    # CA Name to verify
+    caName =
+
+    # path for client certificate (if required)
+    clientCertPath =
+
+    # path for client key (if required)
+    clientKeyPath =
+
+    # Events are batched with the maximum size set by batchSize and staying in pipeline for not longer
+    # than set by frequency
+    frequency = 5s
+    batchSize = 768K
+    # limit by the number of events (0 value has no limit on the number of events)
+    events = 50
+
+    # Splunk through proxy
+    proxyUrl =
+
+    # authentication with basic authorization (user:password)
+    proxyBasicAuth =
+
+    # Splunk acknowledgement url (.../services/collector/ack)
+    ackUrl =
+    # You can specify muiltiple splunk URls for ackUrl
+    #
+    # ackUrls.0 = https://server1:8088/services/collector/ack
+    # ackUrls.1 = https://server1:8088/services/collector/ack
+    # ackUrls.2 = https://server1:8088/services/collector/ack
+    #
+    # Make sure that they in the same order as urls for url, to make sure that this Splunk instance will be
+    # able to acknowledge the payload.
+    #
+    # Limitations:
+    # * The urls cannot have different path.
+
+    # Enable index acknowledgment
+    ackEnabled = false
+
+    # Index acknowledgment timeout
+    ackTimeout = 3m
+
+    # Timeout specifies a time limit for requests made by collector.
+    # The timeout includes connection time, any
+    # redirects, and reading the response body.
+    timeout = 30s
+
+    # in case when pipeline can post to multiple indexes, we want to avoid posibility of blocking
+    # all pipelines, because just some events have incorrect index
+    dedicatedClientPerIndex = true
+    # in case if some indexes aren't used anymore, how often to destroy the dedicated client
+    # dedicatedClientCleanPeriod = 24h
+    # possible values: RedirectToDefault, Drop, Retry
+    incorrectIndexBehavior = RedirectToDefault
+
+    # gzip compression level (nocompression, default, 1...9)
+    compressionLevel = default
+
+    # number of dedicated splunk output threads (to increase throughput above 4k events per second)
+    threads = 1
+
+    # if you want to exclude some preindexed fields from events
+    # excludeFields.kubernetes_pod_ip = true
+
+  002-daemonset.conf: |
+    # DaemonSet configuration is used for Nodes and Masters.
+
+    # Connection to the docker host
+    [general.docker]
+
+    # url for docker API, only unix socket is supported
+    url = unix:///rootfs/var/run/docker.sock
+
+    # path to docker root folder (can fallback to use folder structure to read docker metadata)
+    dockerRootFolder = /rootfs/var/lib/docker/
+
+    # (obsolete) In case if pod metadata was not retrievied. how often collector should retry to reload the pod metadata
+    # metadataFetchRetry = 5s
+
+    # (obsolete) In case if event is recent, how long pipeline should wait for the metadata to be available in Kubernetes API
+    # metadataFetchWait = 30s
+
+    # (obsolete) In case if collector does not see new events for specific container and with the last metadata refresh
+    # We have not found this container - fow how long we should keep this metadata in cache.
+    # metadataTTL = 5s
+
+    # Timeout for http responses to docker client. The streaming requests depend on this timeout.
+    timeout = 1m
+
+    # in case of Kubernetes/OpenShift if you schedule some containers with Docker, but not with the Kubernetes
+    # that allows us to find them (by default finding all containers with name not starting with k8s_)
+    containersNameFilter = ^(([^k])|(k[^8])|(k8[^s])|(k8s[^_])).*$
+
+    # regex to find docker container cgroups (helps excluding other cgroups with matched ID)
+    containersCgroupFilter = ^(/([^/\s]+/)*(docker-|docker/)[0-9a-f]{64}(\.scope)?)$
+
+
+    // connection to CRIO
+    [general.cri-o]
+
+    # url for CRIO API, only unix socket is supported
+    url = unix:///rootfs/var/run/crio/crio.sock
+
+    # Timeout for http responses to docker client. The streaming requests depend on this timeout.
+    timeout = 1m
+
+
+    [general.containerd]
+
+    runtimePath = /rootfs/var/run/containerd
+    namespace = k8s.io
+
+
+    # cgroup input
+    [input.system_stats]
+
+    # disable system level stats
+    disabled.host = false
+    disabled.cgroup = false
+
+    # cgroups fs location
+    pathCgroups = /rootfs/sys/fs/cgroup
+
+    # proc location
+    pathProc = /rootfs/proc
+
+    # how often to collect cgroup stats
+    statsInterval = 30s
+
+    # override type
+    type.host = kubernetes_stats_v2_host
+    type.cgroup = kubernetes_stats_v2_cgroup
+
+    # specify Splunk index
+    index.host =
+    index.cgroup =
+
+    # set output (splunk or devnull, default is [general]defaultOutput)
+    output.host =
+    output.cgroup =
+
+
+    # proc input
+    [input.proc_stats]
+
+    # disable proc level stats
+    disabled = false
+
+    # proc location
+    pathProc = /rootfs/proc
+
+    # how often to collect proc stats
+    statsInterval = 60s
+
+    # override type
+    type = kubernetes_proc_stats_v2
+
+    # specify Splunk index
+    index.host =
+    index.cgroup =
+
+    # proc filesystem includes by default system threads (there can be over 100 of them)
+    # these stats do not help with the observability
+    # excluding them can reduce the size of the index, performance of the searches and usage of the collector
+    includeSystemThreads = false
+
+    # set output (splunk or devnull, default is [general]defaultOutput)
+    output.host =
+    output.cgroup =
+
+
+    # network stats
+    [input.net_stats]
+
+    # disable net stats
+    disabled = false
+
+    # proc path location
+    pathProc = /rootfs/proc
+
+    # how often to collect net stats
+    statsInterval = 30s
+
+    # override type
+    type = kubernetes_net_stats_v2
+
+    # specify Splunk index
+    index.host =
+    index.cgroup =
+
+    # set output (splunk or devnull, default is [general]defaultOutput)
+    output.host =
+    output.cgroup =
+
+
+    # network socket table
+    [input.net_socket_table]
+
+    # disable net stats
+    disabled = false
+
+    # proc path location
+    pathProc = /rootfs/proc
+
+    # how often to collect net stats
+    statsInterval = 30s
+
+    # override type
+    type = kubernetes_net_socket_table
+
+    # specify Splunk index
+    index.host =
+    index.cgroup =
+
+    # set output (splunk or devnull, default is [general]defaultOutput)
+    output.host =
+    output.cgroup =
+
+    # group connections by tcp_state, localAddr, remoteAddr (if localPort is not the port it is listening on)
+    # that can significally reduces the amount of events
+    group = true
+
+
+    # mount input (collects mount stats where kubelet runtime is stored)
+    [input.mount_stats]
+
+    # disable system level stats
+    disabled = false
+
+    # how often to collect mount stats
+    statsInterval = 30s
+
+    # override type
+    type = kubernetes_mount_stats
+
+    # specify Splunk index
+    index =
+
+    # set output (splunk or devnull, default is [general]defaultOutput)
+    output =
+
+
+    # Container Log files
+    [input.files]
+
+    # disable container logs monitoring
+    disabled = false
+
+    # root location of docker log files
+    # logs are expected in standard docker format like {containerID}/{containerID}-json.log
+    # rotated files
+    path = /rootfs/var/lib/docker/containers/
+    # root location of CRI-O files
+    # logs are expected in Kubernetes format, like {podID}/{containerName}/0.log
+    crioPath = /rootfs/var/log/pods/
+
+    # (obsolete) glob matching pattern for log files
+    # glob = */*-json.log*
+
+    # files are read using polling schema, when reach the EOF how often to check if files got updated
+    pollingInterval = 250ms
+
+    # how often to look for the new files under logs path
+    walkingInterval = 5s
+
+    # include verbose fields in events (file offset)
+    verboseFields = false
+
+    # override type
+    type = kubernetes_logs
+
+    # specify Splunk index
+    index =
+
+    # docker splits events when they are larger than 10-100k (depends on the docker version)
+    # we join them together by default and forward to Splunk as one event
+    joinPartialEvents = true
+
+    # In case if your containers report messages with terminal colors or other escape sequences
+    # you can enable strip for all the containers in one place.
+    # Better is to enable it only for required container with the label collectord.io/strip-terminal-escape-sequences=true
+    stripTerminalEscapeSequences = false
+    # Regexp used for stripping terminal colors, it does not stip all the escape sequences
+    # Read http://man7.org/linux/man-pages/man4/console_codes.4.html for more information
+    stripTerminalEscapeSequencesRegex = (\x1b\[\d{1,3}(;\d{1,3})*m)|(\x07)|(\x1b]\d+(\s\d)?;[^\x07]+\x07)|(.*\x1b\[K)
+
+    # set output (splunk or devnull, default is [general]defaultOutput)
+    output =
+
+    # configure default thruput per second for for each container log
+    # for example if you set `thruputPerSecond = 128Kb`, that will limit amount of logs forwarded
+    # from the single container to 128Kb per second.
+    thruputPerSecond =
+
+    # Configure events that are too old to be forwarded, for example 168h (7 days) - that will drop all events
+    # older than 7 days
+    tooOldEvents =
+
+    # Configure events that are too new to be forwarded, for example 1h - that will drop all events that are 1h in future
+    tooNewEvents =
+
+
+    # Application Logs
+    [input.app_logs]
+
+    # disable container application logs monitoring
+    disabled = false
+
+    # root location of mounts (applies to hostPath mounts only), if the hostPath differs inside container from the path on host
+    root = /rootfs/
+
+    # how often to review list of available volumes
+    syncInterval = 5s
+
+    # glob matching pattern for log files
+    glob = *.log*
+
+    # files are read using polling schema, when reach the EOF how often to check if files got updated
+    pollingInterval = 250ms
+
+    # how often to look for the new files under logs path
+    walkingInterval = 5s
+
+    # include verbose fields in events (file offset)
+    verboseFields = false
+
+    # override type
+    type = kubernetes_logs
+
+    # specify Splunk index
+    index =
+
+    # we split files using new line character, with this configuration you can specify what defines the new event
+    # after new line
+    eventPatternRegex = ^[^\s]
+    # Maximum interval of messages in pipeline
+    eventPatternMaxInterval = 100ms
+    # Maximum time to wait for the messages in pipeline
+    eventPatternMaxWait = 1s
+    # Maximum message size
+    eventPatternMaxSize = 100kb
+
+    # set output (splunk or devnull, default is [general]defaultOutput)
+    output =
+
+    # configure default thruput per second for for each container log
+    # for example if you set `thruputPerSecond = 128Kb`, that will limit amount of logs forwarded
+    # from the single container to 128Kb per second.
+    thruputPerSecond =
+
+    # Configure events that are too old to be forwarded, for example 168h (7 days) - that will drop all events
+    # older than 7 days
+    tooOldEvents =
+
+    # Configure events that are too new to be forwarded, for example 1h - that will drop all events that are 1h in future
+    tooNewEvents =
+
+
+    # Host logs. Input syslog(.\d+)? files
+    [input.files::syslog]
+
+    # disable host level logs
+    disabled = false
+
+    # root location of docker files
+    path = /rootfs/var/log/
+
+    # regex matching pattern
+    match = ^(syslog|messages)(.\d+)?$
+
+    # limit search only on one level
+    recursive = false
+
+    # files are read using polling schema, when reach the EOF how often to check if files got updated
+    pollingInterval = 250ms
+
+    # how often o look for the new files under logs path
+    walkingInterval = 5s
+
+    # include verbose fields in events (file offset)
+    verboseFields = false
+
+    # override type
+    type = kubernetes_host_logs
+
+    # specify Splunk index
+    index =
+
+    # field extraction
+    extraction = ^(?P<timestamp>[A-Za-z]+\s+\d+\s\d+:\d+:\d+)\s(?P<syslog_hostname>[^\s]+)\s(?P<syslog_component>[^:\[]+)(\[(?P<syslog_pid>\d+)\])?: (.+)$
+
+    # timestamp field
+    timestampField = timestamp
+
+    # format for timestamp
+    # the layout defines the format by showing how the reference time, defined to be `Mon Jan 2 15:04:05 -0700 MST 2006`
+    timestampFormat = Jan 2 15:04:05
+
+    # Adjust date, if month/day aren't set in format
+    timestampSetMonth = false
+    timestampSetDay = false
+
+    # timestamp location (if not defined by format)
+    timestampLocation = Local
+
+    # sample output (-1 does not sample, 20 - only 20% of the logs should be forwarded)
+    samplingPercent = -1
+
+    # sampling key for hash based sampling (should be regexp with the named match pattern `key`)
+    samplingKey =
+
+    # set output (splunk or devnull, default is [general]defaultOutput)
+    output =
+
+    # configure default thruput per second for this files group
+    # for example if you set `thruputPerSecond = 128Kb`, that will limit amount of logs forwarded
+    # from the files in this group to 128Kb per second.
+    thruputPerSecond =
+
+    # Configure events that are too old to be forwarded, for example 168h (7 days) - that will drop all events
+    # older than 7 days
+    tooOldEvents =
+
+    # Configure events that are too new to be forwarded, for example 1h - that will drop all events that are 1h in future
+    tooNewEvents =
+
+
+    # Host logs. Input all *.log(.\d+)? files
+    [input.files::logs]
+
+    # disable host level logs
+    disabled = false
+
+    # root location of log files
+    path = /rootfs/var/log/
+
+    # regex matching pattern
+    match = ^(([\w\-.]+\.log(.[\d\-]+)?)|(docker))$
+
+    # files are read using polling schema, when reach the EOF how often to check if files got updated
+    pollingInterval = 250ms
+
+    # how often o look for the new files under logs path
+    walkingInterval = 5s
+
+    # include verbose fields in events (file offset)
+    verboseFields = false
+
+    # override type
+    type = kubernetes_host_logs
+
+    # specify Splunk index
+    index =
+
+    # field extraction
+    extraction =
+
+    # timestamp field
+    timestampField =
+
+    # format for timestamp
+    # the layout defines the format by showing how the reference time, defined to be `Mon Jan 2 15:04:05 -0700 MST 2006`
+    timestampFormat =
+
+    # timestamp location (if not defined by format)
+    timestampLocation =
+
+    # sample output (-1 does not sample, 20 - only 20% of the logs should be forwarded)
+    samplingPercent = -1
+
+    # sampling key for hash based sampling (should be regexp with the named match pattern `key`)
+    samplingKey =
+
+    # set output (splunk or devnull, default is [general]defaultOutput)
+    output =
+
+    # configure default thruput per second for this files group
+    # for example if you set `thruputPerSecond = 128Kb`, that will limit amount of logs forwarded
+    # from the files in this group to 128Kb per second.
+    thruputPerSecond =
+
+    # Configure events that are too old to be forwarded, for example 168h (7 days) - that will drop all events
+    # older than 7 days
+    tooOldEvents =
+
+    # Configure events that are too new to be forwarded, for example 1h - that will drop all events that are 1h in future
+    tooNewEvents =
+
+
+    [input.journald]
+
+    # disable host level logs
+    disabled = false
+
+    # root location of log files
+    path.persistent = /rootfs/var/log/journal/
+    path.volatile = /rootfs/run/log/journal/
+
+    # when reach end of journald, how often to pull
+    pollingInterval = 250ms
+
+    # if you don't want to forward journald from the beginning,
+    # set the oldest event in relative value, like -14h or -30m or -30s (h/m/s supported)
+    startFromRel =
+
+    # override type
+    type = kubernetes_host_logs
+
+    # specify Splunk index
+    index =
+
+    # sample output (-1 does not sample, 20 - only 20% of the logs should be forwarded)
+    samplingPercent = -1
+
+    # sampling key (should be regexp with the named match pattern `key`)
+    samplingKey =
+
+    # how often to reopen the journald to free old files
+    reopenInterval = 1h
+
+    # set output (splunk or devnull, default is [general]defaultOutput)
+    output =
+
+    # configure default thruput per second for this files group
+    # for example if you set `thruputPerSecond = 128Kb`, that will limit amount of logs forwarded
+    # from the files in this group to 128Kb per second.
+    thruputPerSecond =
+
+    # Configure events that are too old to be forwarded, for example 168h (7 days) - that will drop all events
+    # older than 7 days
+    tooOldEvents =
+
+    # Configure events that are too new to be forwarded, for example 1h - that will drop all events that are 1h in future
+    tooNewEvents =
+
+
+    # Pipe to join events (container logs only)
+    [pipe.join]
+
+    # disable joining event
+    disabled = false
+
+    # Maximum interval of messages in pipeline
+    maxInterval = 100ms
+
+    # Maximum time to wait for the messages in pipeline
+    maxWait = 1s
+
+    # Maximum message size
+    maxSize = 100K
+
+    # Default pattern to indicate new message (should start not from space)
+    patternRegex = ^[^\s]
+
+
+    # Kube API Server has trace messages with multi line events
+    [pipe.join::kube-apiserver]
+    disabled = false
+    matchRegex.kubernetes_container_image = ^gcr.io/google_containers/kube-apiserver-.*$
+    matchRegex.stream = stderr
+    patternRegex = ^[IWEF]\d{4}\s\d{2}:\d{2}:\d{2}.\d{6}\s
+
+
+    # (depricated, use annotations for settings up join rules)
+    # Define special event join patterns for matched events
+    # Section consist of [pipe.join::<name>]
+    # [pipe.join::my_app]
+    ## Set match pattern for the fields
+    #; matchRegex.docker_container_image = my_app
+    #; matchRegex.stream = stdout
+    ## All events start from '[<digits>'
+    #; patternRegex = ^\[\d+
+
+
+    [input.prometheus::kubelet]
+
+    # disable prometheus kubelet metrics
+    disabled = false
+
+    # override type
+    type = kubernetes_prometheus
+
+    # specify Splunk index
+    index =
+
+    # override host (environment variables are supported, by default Kubernetes node name is used)
+    host = ${KUBERNETES_NODENAME}
+
+    # override source
+    source = kubelet
+
+    # how often to collect prometheus metrics
+    interval = 60s
+
+    # Prometheus endpoint, multiple values can be specified, collector tries them in order till finding the first
+    # working endpoint.
+    # At first trying to get it through proxy
+    endpoint.1proxy = https://${KUBERNETES_SERVICE_HOST}:${KUBERNETES_SERVICE_PORT}/api/v1/nodes/${KUBERNETES_NODENAME}/proxy/metrics
+    # In case if cannot get it through proxy, trying localhost
+    endpoint.2http = http://127.0.0.1:10255/metrics
+
+    # token for "Authorization: Bearer $(cat tokenPath)"
+    tokenPath = /var/run/secrets/kubernetes.io/serviceaccount/token
+
+    # server certificate for certificate validation
+    certPath = /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+
+    # client certificate for authentication
+    clientCertPath =
+
+    # Allow invalid SSL server certificate
+    insecure = true
+
+    # include metrics help with the events
+    includeHelp = false
+
+    # set output (splunk or devnull, default is [general]defaultOutput)
+    output =
+
+
+    # [diagnostics::node-entropy]
+    # settings.path = /rootfs/proc/sys/kernel/random/entropy_avail
+    # settings.interval = 1h
+    # settings.threshold = 800
+
+
+  003-daemonset-master.conf: |
+    [input.prometheus::kubernetes-api]
+
+    # disable prometheus kubernetes-api metrics
+    disabled = false
+
+    # override type
+    type = kubernetes_prometheus
+
+    # specify Splunk index
+    index =
+
+    # override host (environment variables are supported, by default Kubernetes node name is used)
+    host = ${KUBERNETES_NODENAME}
+
+    # override source
+    source = kubernetes-api
+
+    # how often to collect prometheus metrics
+    interval = 60s
+
+    # prometheus endpoint
+    # at first trying to get it from localhost (avoiding load balancer, if multiple api servers)
+    endpoint.1localhost = https://127.0.0.1:6443/metrics
+    # as fallback using proxy
+    endpoint.2kubeapi = https://${KUBERNETES_SERVICE_HOST}:${KUBERNETES_SERVICE_PORT}/metrics
+
+    # token for "Authorization: Bearer $(cat tokenPath)"
+    tokenPath = /var/run/secrets/kubernetes.io/serviceaccount/token
+
+    # server certificate for certificate validation
+    certPath = /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+
+    # client certificate for authentication
+    clientCertPath =
+
+    # Allow invalid SSL server certificate
+    insecure = true
+
+    # include metrics help with the events
+    includeHelp = false
+
+    # set output (splunk or devnull, default is [general]defaultOutput)
+    output =
+
+
+    # This configuration works if scheduled is bind to the localhost:10251
+    [input.prometheus::scheduler]
+
+    # disable prometheus scheduler metrics
+    disabled = false
+
+    # override type
+    type = kubernetes_prometheus
+
+    # specify Splunk index
+    index =
+
+    # override host
+    host = ${KUBERNETES_NODENAME}
+
+    # override source
+    source = scheduler
+
+    # how often to collect prometheus metrics
+    interval = 60s
+
+    # prometheus endpoint
+    endpoint = http://127.0.0.1:10251/metrics
+
+    # token for "Authorization: Bearer $(cat tokenPath)"
+    tokenPath =
+
+    # server certificate for certificate validation
+    certPath =
+
+    # client certificate for authentication
+    clientCertPath =
+
+    # Allow invalid SSL server certificate
+    insecure = true
+
+    # include metrics help with the events
+    includeHelp = false
+
+    # set output (splunk or devnull, default is [general]defaultOutput)
+    output =
+
+
+    # This configuration works if controller-manager is bind to the localhost:10252
+    [input.prometheus::controller-manager]
+
+    # disable prometheus controller-manager metrics
+    disabled = false
+
+    # override type
+    type = kubernetes_prometheus
+
+    # specify Splunk index
+    index =
+
+    # override host
+    host = ${KUBERNETES_NODENAME}
+
+    # override source
+    source = controller-manager
+
+    # how often to collect prometheus metrics
+    interval = 60s
+
+    # prometheus endpoint
+    endpoint = http://127.0.0.1:10252/metrics
+
+    # token for "Authorization: Bearer $(cat tokenPath)"
+    tokenPath =
+
+    # server certificate for certificate validation
+    certPath =
+
+    # client certificate for authentication
+    clientCertPath =
+
+    # Allow invalid SSL server certificate
+    insecure = false
+
+    # include metrics help with the events
+    includeHelp = false
+
+    # set output (splunk or devnull, default is [general]defaultOutput)
+    output =
+
+
+    [input.prometheus::etcd]
+
+    # disable prometheus etcd metrics
+    disabled = false
+
+    # override type
+    type = kubernetes_prometheus
+
+    # specify Splunk index
+    index =
+
+    # override host
+    host = ${KUBERNETES_NODENAME}
+
+    # override source
+    source = etcd
+
+    # how often to collect prometheus metricd
+    interval = 60s
+
+    # prometheus endpoint
+    endpoint.http = http://:2379/metrics
+    endpoint.https = https://:2379/metrics
+
+    # token for "Authorization: Bearer $(cat tokenPath)"
+    tokenPath =
+
+    # server certificate for certificate validation
+    certPath = /rootfs/etc/kubernetes/pki/etcd/ca.crt
+
+    # client certificate for authentication
+    clientCertPath = /rootfs/etc/kubernetes/pki/apiserver-etcd-client.crt
+    clientKeyPath = /rootfs/etc/kubernetes/pki/apiserver-etcd-client.key
+
+    # Allow invalid SSL server certificate
+    insecure = true
+
+    # include metrics help with the events
+    includeHelp = false
+
+    # set output (splunk or devnull, default is [general]defaultOutput)
+    output =
+
+
+  004-addon.conf: |
+    [general]
+
+    # addons can be run in parallel with agents
+    addon = true
+
+    [input.kubernetes_events]
+
+    # disable events
+    disabled = false
+
+    # override type
+    type = kubernetes_events
+
+    # specify Splunk index
+    index =
+
+    # (obsolete, depends on kubernetes timeout)
+    # Set the timeout for how long request to watch events going to hang reading.
+    # eventsWatchTimeout = 30m
+
+    # (obsolete, depends on kubernetes timeout)
+    # Ignore events last seen later that this duration.
+    # eventsTTL = 12h
+
+    # set output (splunk or devnull, default is [general]defaultOutput)
+    output =
+
+
+    [input.kubernetes_watch::pods]
+
+    # disable events
+    disabled = false
+
+    # Set the timeout for how often watch request should refresh the whole list
+    refresh = 10m
+
+    apiVersion = v1
+    kind = pod
+    namespace =
+
+    # override type
+    type = kubernetes_objects
+
+    # specify Splunk index
+    index =
+
+    # set output (splunk or devnull, default is [general]defaultOutput)
+    output =
+

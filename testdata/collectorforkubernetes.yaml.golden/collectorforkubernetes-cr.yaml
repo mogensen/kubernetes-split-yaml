@@ -1,0 +1,66 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app: collectorforkubernetes
+  name: collectorforkubernetes
+rules:
+- apiGroups: ['extensions']
+  resources: ['podsecuritypolicies']
+  verbs:     ['use']
+  resourceNames:
+  - privileged
+- apiGroups:
+  - ""
+  - apps
+  - batch
+  - extensions
+  - monitoring.coreos.com
+  - etcd.database.coreos.com
+  - vault.security.coreos.com
+  - certmanager.k8s.io
+  - kafka.strimzi.io
+  - org.eclipse.che
+  - dynatrace.com
+  - nats.io
+  - syndesis.io
+  - collectord.io
+  resources:
+  - alertmanagers
+  - cronjobs
+  - daemonsets
+  - deployments
+  - endpoints
+  - events
+  - jobs
+  - namespaces
+  - nodes
+  - nodes/metrics
+  - nodes/proxy
+  - pods
+  - prometheuses
+  - replicasets
+  - replicationcontrollers
+  - scheduledjobs
+  - services
+  - statefulsets
+  - vaultservices
+  - etcdclusters
+  - challenges
+  - kafkas
+  - checlusters
+  - oneagents
+  - natsclusters
+  - syndesises
+  - persistentvolumeclaims
+  - configurations
+  verbs:
+  - get
+  - list
+  - watch
+- nonResourceURLs:
+  - /metrics
+  verbs:
+  - get
+  apiGroups: []
+  resources: []

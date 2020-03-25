@@ -1,0 +1,151 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: collectorforkubernetes-master
+  namespace: collectorforkubernetes
+  labels:
+    app: collectorforkubernetes
+spec:
+  updateStrategy:
+    type: RollingUpdate
+
+  selector:
+    matchLabels:
+      daemon: collectorforkubernetes
+
+  template:
+    metadata:
+      name: collectorforkubernetes-master
+      labels:
+        daemon: collectorforkubernetes
+      
+    spec:
+      
+      priorityClassName: collectorforkubernetes-critical
+      
+      dnsPolicy: ClusterFirstWithHostNet
+      hostNetwork: true
+      serviceAccountName: collectorforkubernetes
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/master
+                operator: Exists
+      tolerations:
+      - operator: "Exists"
+        effect: "NoSchedule"
+      - operator: "Exists"
+        effect: "NoExecute"
+      containers:
+      - name: collectorforkubernetes
+        image: docker.io/outcoldsolutions/collectorforkubernetes:5.14.284
+        imagePullPolicy: Always
+        securityContext:
+          runAsUser: 0
+          privileged: true
+        resources:
+          limits:
+            cpu: 2
+            memory: 512Mi
+          requests:
+            cpu: 200m
+            memory: 192Mi
+        env:
+        - name: KUBERNETES_NODENAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        volumeMounts:
+        - name: collectorforkubernetes-state
+          mountPath: /data
+        - name: collectorforkubernetes-config
+          mountPath: /config/
+          readOnly: true
+        - name: cgroup
+          mountPath: /rootfs/sys/fs/cgroup
+          readOnly: true
+        - name: proc
+          mountPath: /rootfs/proc
+          readOnly: true
+        - name: docker-logs
+          mountPath: /rootfs/var/lib/docker/
+          readOnly: true
+          mountPropagation: HostToContainer
+        - name: docker-unix-socket
+          mountPath: /rootfs/var/run/docker.sock
+          readOnly: true
+        - name: crio-unix-socket
+          mountPath: /rootfs/var/run/crio/
+          readOnly: true
+        - name: containerd-unix-socket
+          mountPath: /rootfs/var/run/containerd/
+          readOnly: true
+        - name: logs
+          mountPath: /rootfs/var/log/
+          readOnly: true
+        - name: run-logs
+          mountPath: /rootfs/run/log/
+          readOnly: true
+        - name: k8s-certs
+          mountPath: /rootfs/etc/kubernetes/pki/
+          readOnly: true
+        - name: kubelet-root
+          mountPath: /rootfs/var/lib/kubelet/
+          readOnly: true
+          mountPropagation: HostToContainer
+        - name: localtime
+          mountPath: /etc/localtime
+          readOnly: true
+      volumes:
+      - name: collectorforkubernetes-state
+        hostPath:
+          path: /var/lib/collectorforkubernetes/data/
+      - name: docker-logs
+        hostPath:
+          path: /var/lib/docker/
+      - name: cgroup
+        hostPath:
+          path: /sys/fs/cgroup
+      - name: proc
+        hostPath:
+          path: /proc
+      - name: logs
+        hostPath:
+          path: /var/log
+      - name: run-logs
+        hostPath:
+          path: /run/log
+      - name: docker-unix-socket
+        hostPath:
+          path: /var/run/docker.sock
+      - name: crio-unix-socket
+        hostPath:
+          path: /var/run/crio/
+      - name: containerd-unix-socket
+        hostPath:
+          path: /var/run/containerd/
+      - name: k8s-certs
+        hostPath:
+          path: /etc/kubernetes/pki/
+      - name: kubelet-root
+        hostPath:
+          path: /var/lib/kubelet/
+      - name: localtime
+        hostPath:
+          path: /etc/localtime
+      - name: collectorforkubernetes-config
+        configMap:
+          name: collectorforkubernetes
+          items:
+          - key: 001-general.conf
+            path: 001-general.conf
+          - key: 002-daemonset.conf
+            path: 002-daemonset.conf
+          - key: 003-daemonset-master.conf
+            path: 003-daemonset-master.conf

@@ -1,0 +1,16 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    app: collectorforkubernetes
+  name: collectorforkubernetes
+  namespace: collectorforkubernetes
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: collectorforkubernetes
+subjects:
+  - kind: ServiceAccount
+    name: collectorforkubernetes
+    namespace: collectorforkubernetes
+

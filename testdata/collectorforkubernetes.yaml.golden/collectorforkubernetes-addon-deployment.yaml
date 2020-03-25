@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: collectorforkubernetes-addon
+  namespace: collectorforkubernetes
+  labels:
+    app: collectorforkubernetes
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      daemon: collectorforkubernetes
+
+  template:
+    metadata:
+      name: collectorforkubernetes-addon
+      labels:
+        daemon: collectorforkubernetes
+      
+    spec:
+      
+      priorityClassName: collectorforkubernetes-critical
+      
+      serviceAccountName: collectorforkubernetes
+      containers:
+      - name: collectorforkubernetes
+        image: docker.io/outcoldsolutions/collectorforkubernetes:5.14.284
+        imagePullPolicy: Always
+        securityContext:
+          runAsUser: 0
+          privileged: true
+        resources:
+          limits:
+            cpu: 500m
+            memory: 256Mi
+          requests:
+            cpu: 50m
+            memory: 64Mi
+        env:
+        - name: KUBERNETES_NODENAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        volumeMounts:
+        - name: collectorforkubernetes-state
+          mountPath: /data
+        - name: collectorforkubernetes-config
+          mountPath: /config/
+          readOnly: true
+      volumes:
+      - name: collectorforkubernetes-state
+        hostPath:
+          path: /var/lib/collectorforkubernetes/data/
+      - name: collectorforkubernetes-config
+        configMap:
+          name: collectorforkubernetes
+          items:
+          - key: 001-general.conf
+            path: 001-general.conf
+          - key: 004-addon.conf
+            path: 004-addon.conf
