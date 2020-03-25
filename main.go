@@ -71,7 +71,7 @@ func readAndSplitFile(file string) []string {
 		content := strings.TrimSpace(doc)
 		// Ignore empty docs
 		if content != "" {
-			res = append(res, content+"\n")
+			res = append(res, content+LineBreak)
 		}
 	}
 	return res
