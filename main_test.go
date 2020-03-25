@@ -39,7 +39,13 @@ func runTest(t *testing.T, in, out string) {
 		handleFile(in, dir)
 
 		wantFiles, err := filepath.Glob(filepath.Join(out, "*"))
+		if err != nil {
+			t.Errorf("could not find test files: %v", err)
+		}
 		gotFiles, err := filepath.Glob(filepath.Join(dir, "*"))
+		if err != nil {
+			t.Errorf("could not find result files: %v", err)
+		}
 
 		if len(gotFiles) != len(wantFiles) {
 			t.Errorf("handleFile() = %v, want %v", len(gotFiles), len(wantFiles))

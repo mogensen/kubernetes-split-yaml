@@ -34,7 +34,10 @@ func main() {
 func handleFile(file string, outputDir string) {
 	files := readAndSplitFile(file)
 
-	os.Mkdir(outputDir, os.ModePerm)
+	err := os.Mkdir(outputDir, os.ModePerm)
+	if err != nil {
+		log.Warnf("error creating output directory: %v", err)
+	}
 
 	for _, fileContent := range files {
 

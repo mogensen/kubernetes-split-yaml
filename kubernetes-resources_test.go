@@ -6,9 +6,6 @@ import (
 )
 
 func Test_getShortName(t *testing.T) {
-	type args struct {
-		kind string
-	}
 	tests := []struct {
 		name string
 		have string
