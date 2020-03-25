@@ -1061,4 +1061,3 @@ data:
 
     # set output (splunk or devnull, default is [general]defaultOutput)
     output =
-

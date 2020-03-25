@@ -46,11 +46,13 @@ func runTest(t *testing.T, in, out string) {
 		}
 
 		for _, wantFile := range wantFiles {
+			fileName := filepath.Base(wantFile)
+
 			want, _ := ioutil.ReadFile(wantFile)
 			got, _ := ioutil.ReadFile(filepath.Join(dir, filepath.Base(wantFile)))
 
 			if !reflect.DeepEqual(got, want) {
-				t.Errorf(cmp.Diff(got, want))
+				t.Errorf(fileName + "\n" + cmp.Diff(string(got), string(want)))
 			}
 		}
 	})

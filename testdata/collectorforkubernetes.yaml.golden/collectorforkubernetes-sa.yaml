@@ -5,4 +5,3 @@ metadata:
     app: collectorforkubernetes
   name: collectorforkubernetes
   namespace: collectorforkubernetes
-

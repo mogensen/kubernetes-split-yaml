@@ -1,8 +1,7 @@
 package main
 
 import (
-	"bufio"
-	"io"
+	"io/ioutil"
 	"path/filepath"
 
 	"os"
@@ -63,15 +62,9 @@ func handleFile(file string, outputDir string) {
 
 			log.Infof("Creating file: %s", filename)
 
-			f, err := os.Create(filename)
+			err := ioutil.WriteFile(filename, []byte(fileContent), os.ModePerm)
 			if err != nil {
 				log.Fatalf("Failed creating file %s : %v", filename, err)
-			}
-			defer f.Close()
-
-			_, err = f.WriteString(fileContent)
-			if err != nil {
-				log.Fatalf("Failed writing file %s : %v", filename, err)
 			}
 		}
 	}
@@ -79,35 +72,16 @@ func handleFile(file string, outputDir string) {
 
 func readAndSplitFile(file string) []string {
 
-	f, err := os.OpenFile(file, os.O_RDONLY, os.ModePerm)
+	fileContent, err := ioutil.ReadFile(file)
 	if err != nil {
 		log.Fatalf("Failed reading file %s : %v", file, err)
 	}
 
-	defer f.Close()
-
-	rd := bufio.NewReader(f)
-	c := []string{}
-
-	current := ""
-
-	for {
-		line, err := rd.ReadString('\n')
-
-		prettyline := strings.TrimSpace(line)
-		if prettyline == "---" {
-			c = append(c, current)
-			current = ""
-		} else {
-			current += line
-		}
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			log.Panicf("read file line error: %v", err)
-		}
+	docs := strings.Split(string(fileContent), "\n---")
+	// Trim whitespace in both ends of each yaml docs.
+	// - Re-add a single newline last
+	for i, doc := range docs {
+		docs[i] = strings.TrimSpace(doc) + "\n"
 	}
-	c = append(c, current)
-	return c
+	return docs
 }

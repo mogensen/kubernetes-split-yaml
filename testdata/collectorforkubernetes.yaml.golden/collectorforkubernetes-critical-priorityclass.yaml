@@ -3,5 +3,3 @@ kind: PriorityClass
 metadata:
   name: collectorforkubernetes-critical
 value: 1000000000
-
-
