@@ -1,5 +1,6 @@
 # kubernetes-split-yaml
 
+[![Build Status](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Factions-badge.atrox.dev%2Fmogensen%2Fkubernetes-split-yaml%2Fbadge%3Fref%3Dmaster&style=flat)](https://actions-badge.atrox.dev/mogensen/kubernetes-split-yaml/goto?ref=master)
 [![Go Report Card](https://goreportcard.com/badge/github.com/mogensen/kubernetes-split-yaml)](https://goreportcard.com/report/github.com/mogensen/kubernetes-split-yaml)
 
 Split the 'giant yaml file' into one file pr kubernetes resource
