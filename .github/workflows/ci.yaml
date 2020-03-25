@@ -1,49 +1,29 @@
-name: ci
-
+name: Ci
 on:
-  pull_request:
-    branches:
-      - master
-      - releases/*
   push:
     branches:
-      - master
-      - releases/*
-
+      - 'master'
+  pull_request:
+    branches:
+      - '*'
 jobs:
-  ci:
-    runs-on: ${{ matrix.os }}
+  build:
     strategy:
-      fail-fast: false
       matrix:
-        os:
-          - ubuntu-latest
-          - macOS-latest
-          - windows-latest
-        version:
-          - latest
-          - v0.117.0
+        os: [ubuntu-latest, macOS-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    name: Build & Test
     steps:
-      -
-        name: Checkout
-        uses: actions/checkout@v2
-      -
-        name: Unshallow
-        run: git fetch --prune --unshallow
-      -
-        name: Set up Go
-        uses: actions/setup-go@v1
-        with:
-          go-version: 1.13.x
-      -
-        name: Check
-        uses: ./
-        with:
-          version: ${{ matrix.version }}
-          args: check --debug
-      -
-        name: GoReleaser
-        uses: ./
-        with:
-          version: ${{ matrix.version }}
-          args: release --skip-publish --rm-dist
+    - uses: actions/checkout@v2
+    - uses: actions/setup-go@v2-beta
+      with:
+        go-version: '^1.14.0'
+    - run: go mod download
+    - name: Build & Test
+      run: |
+        go build -v .
+        go test ./...
+    - name: Run GoReleaser
+      uses: goreleaser/goreleaser-action@master
+      with:
+        args: release --snapshot --skip-publish --rm-dist
