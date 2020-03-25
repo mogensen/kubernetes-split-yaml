@@ -1,23 +1,6 @@
 # .circleci/config.yml
-version: 2
-jobs:
-  build:
-    docker:
-      # specify the version
-      - image: circleci/golang:1.12
-    steps:
-      - checkout
-      # - run: go get -v -t -d ./...
-      # - run: go test -v ./...
-      - run: go build
-  release:
-    docker:
-      - image: circleci/golang:1.12
-    steps:
-      - checkout
-      - run: curl -sL https://git.io/goreleaser | bash
+version: 2.1
 workflows:
-  version: 2
   commit:
     jobs:
       - build
@@ -29,3 +12,19 @@ workflows:
               ignore: /.*/
             tags:
               only: /v[0-9]+(\.[0-9]+)*(-.*)*/
+jobs:
+  build:
+    docker:
+      # specify the version
+      - image: circleci/golang:1.14
+    steps:
+      - checkout
+      - run: go test -v ./...
+      - run: go build
+  release:
+    docker:
+      - image: circleci/golang:1.14
+    steps:
+      - checkout
+      - run: curl -sL https://git.io/goreleaser | bash
+
