@@ -20,7 +20,7 @@ func getYamlInfo(yamlContent string) (string, string, error) {
 	var m KubernetesAPI
 	err := yaml.Unmarshal([]byte(cleanYaml), &m)
 	if err != nil {
-		log.Fatalf("Could not unmarshal: %v \n---\n%v", err, yamlContent)
+		return "", "", fmt.Errorf("Could not unmarshal: %v \n---\n%v", err, yamlContent)
 	}
 
 	if m.Kind == "" {
