@@ -17,9 +17,28 @@ This will download the source and install the binary `kubernetes-split-yaml`
 
 ## Usage
 
+* Simple invocation
+
 ```
 $ kubernetes-split-yaml giant-k8s-file.yaml
 ```
+
+* Modify / filter output filenames
+
+```
+# Note by default it'll output 0.2.0 non-hierical files
+$ kubernetes-split-yaml --help
+
+# Get namespaced hierarchy for output files
+$ kubernetes-split-yaml --template_sel tpl_ns --outdir my-clustername/namespaces giant-k8s-file.yaml
+
+# Ditto above, but only for Kubernetes objects starting with "myapp"
+$ kubernetes-split-yaml --name_re ^myapp --template_sel tpl_ns --outdir my-clustername/namespaces giant-k8s-file.yaml
+
+# Ditto above, but only for Deployments and StatefulSets
+$ kubernetes-split-yaml --kind_re '^(StatefulSet|Deployment)' --name_re ^myapp --template_sel tpl_ns --outdir my-clustername/namespaces giant-k8s-file.yaml
+```
+
 
 ## Contributing
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
