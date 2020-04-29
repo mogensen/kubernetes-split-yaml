@@ -10,12 +10,13 @@ func Test_getYamlInfo(t *testing.T) {
 		yamlContent string
 	}
 	tests := []struct {
-		name       string
-		args       args
-		wantKind   string
-		wantName   string
-		wantErr    bool
-		wantErrMsg string
+		name          string
+		args          args
+		wantKind      string
+		wantName      string
+		wantNamespace string
+		wantErr       bool
+		wantErrMsg    string
 	}{
 		{
 			name: "Error on empty file",
@@ -60,18 +61,20 @@ metadata:
 			args: args{
 				yamlContent: `
 apiVersion: v1
-kind: Namespace
+kind: Pod
 metadata:
   name: simple
+  namespace: foo
 `,
 			},
-			wantName: "simple",
-			wantKind: "Namespace",
+			wantName:      "simple",
+			wantNamespace: "foo",
+			wantKind:      "Pod",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, got1, err := getYamlInfo(tt.args.yamlContent)
+			got, err := getYamlInfo(tt.args.yamlContent)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("getYamlInfo() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -84,11 +87,11 @@ metadata:
 				return
 			}
 
-			if got != tt.wantKind {
-				t.Errorf("getYamlInfo() got = %v, want %v", got, tt.wantKind)
+			if got.Kind != tt.wantKind {
+				t.Errorf("getYamlInfo() got = %v, want %v", got.Kind, tt.wantKind)
 			}
-			if got1 != tt.wantName {
-				t.Errorf("getYamlInfo() got1 = %v, want %v", got1, tt.wantName)
+			if got.Metadata.Name != tt.wantName {
+				t.Errorf("getYamlInfo() got = %v, want %v", got.Metadata.Name, tt.wantName)
 			}
 		})
 	}

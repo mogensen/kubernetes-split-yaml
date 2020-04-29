@@ -7,7 +7,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-func getYamlInfo(yamlContent string) (string, string, error) {
+func getYamlInfo(yamlContent string) (*KubernetesAPI, error) {
 
 	// Start by removing all lines with templating in to create sane yaml
 	cleanYaml := ""
@@ -20,14 +20,14 @@ func getYamlInfo(yamlContent string) (string, string, error) {
 	var m KubernetesAPI
 	err := yaml.Unmarshal([]byte(cleanYaml), &m)
 	if err != nil {
-		return "", "", fmt.Errorf("Could not unmarshal: %v \n---\n%v", err, yamlContent)
+		return nil, fmt.Errorf("Could not unmarshal: %v \n---\n%v", err, yamlContent)
 	}
 
 	if m.Kind == "" {
-		return "", "", fmt.Errorf("yaml file with kind missing")
+		return nil, fmt.Errorf("yaml file with kind missing")
 	} else if m.Metadata.Name == "" {
-		return "", "", fmt.Errorf("yaml file with name missing")
+		return nil, fmt.Errorf("yaml file with name missing")
 	}
 
-	return m.Kind, m.Metadata.Name, nil
+	return &m, nil
 }
