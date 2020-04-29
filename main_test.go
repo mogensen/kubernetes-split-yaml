@@ -35,7 +35,7 @@ func Test_outFile(t *testing.T) {
 			kind:        "Pod",
 			namespace:   "foo",
 			name:        "bar",
-			fileExp:     "gen/bar-pod.yaml",
+			fileExp:     filepath.Join("gen", "bar-pod.yaml"),
 		},
 		{
 			tname:       "tpl_ns",
@@ -47,7 +47,7 @@ func Test_outFile(t *testing.T) {
 			kind:        "Pod",
 			namespace:   "foo",
 			name:        "bar",
-			fileExp:     "gen/foo/bar.Pod.yaml",
+			fileExp:     filepath.Join("gen", "foo", "bar.Pod.yaml"),
 		},
 		{
 			tname:       "ns/name.kind-otherRe",
@@ -59,7 +59,7 @@ func Test_outFile(t *testing.T) {
 			kind:        "Pod",
 			namespace:   "foo",
 			name:        "bar",
-			fileExp:     "gen/foo/bar.Pod.yaml",
+			fileExp:     filepath.Join("gen", "foo", "bar.Pod.yaml"),
 		},
 		{
 			tname:       "no-ns/name.kind-otherRe",
@@ -71,7 +71,7 @@ func Test_outFile(t *testing.T) {
 			kind:        "ClusterRole",
 			namespace:   "",
 			name:        "bar",
-			fileExp:     "gen/_no_ns_/bar.ClusterRole.yaml",
+			fileExp:     filepath.Join("gen", "_no_ns_", "bar.ClusterRole.yaml"),
 		},
 		{
 			tname:       "nonmatching-ns",
