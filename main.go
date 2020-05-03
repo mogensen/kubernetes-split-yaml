@@ -19,7 +19,11 @@ var log = logrus.New()
 
 // Some regexp defaults
 const FileRe = ".+"
-const NameRe = "^[^./]+$"
+
+// NameRe must be less strict than e.g. NamespaceRe specially because of
+// - non-namespaced like CRDs (they usually contain dots)
+// - others like PSPs (containing `:`)
+const NameRe = "^[^/ ]+$"
 const KindRe = "^[0-9a-zA-Z]+$"
 
 // NamespaceRe: empty or DNSre
