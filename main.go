@@ -201,10 +201,19 @@ func handleFile(c *cli.Context, file string) {
 }
 
 func readAndSplitFile(file string) []string {
-
-	fileContent, err := ioutil.ReadFile(file)
-	if err != nil {
-		log.Fatalf("Failed reading file %s : %v", file, err)
+	var fileContent []byte
+	if file == "-" {
+		c, err := ioutil.ReadAll(os.Stdin)
+		fileContent = c
+		if err != nil {
+			log.Fatalf("Failed reading from stdin: %v", file, err)
+		}
+	} else {
+		c, err := ioutil.ReadFile(file)
+		fileContent = c
+		if err != nil {
+			log.Fatalf("Failed reading file %s : %v", file, err)
+		}
 	}
 
 	docs := strings.Split(string(fileContent), "\n---")
