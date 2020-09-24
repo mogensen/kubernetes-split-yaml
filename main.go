@@ -206,7 +206,7 @@ func readAndSplitFile(file string) []string {
 		c, err := ioutil.ReadAll(os.Stdin)
 		fileContent = c
 		if err != nil {
-			log.Fatalf("Failed reading from stdin: %v", file, err)
+			log.Fatalf("Failed reading from stdin: %v", err)
 		}
 	} else {
 		c, err := ioutil.ReadFile(file)
