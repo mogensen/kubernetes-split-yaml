@@ -40,6 +40,11 @@ var appFlags = []cli.Flag{
 		Value: "generated",
 		Usage: "output dir",
 	},
+	&cli.BoolFlag{
+		Name:  "cleanup_gotemplate",
+		Value: true,
+		Usage: "remove lines that look like gotemplate",
+	},
 	&cli.StringFlag{
 		Name:  "template_sel",
 		Value: "tpl_flat",
@@ -163,6 +168,7 @@ func handleFile(c *cli.Context, file string) {
 		kind:      c.String("kind_re"),
 		filename:  c.String("file_re"),
 	}
+	cleanupGoTemplate := c.Bool("cleanup_gotemplate")
 
 	tpl, err := template.New("outfile").Parse(outfileTemplate)
 	if err != nil {
@@ -173,7 +179,7 @@ func handleFile(c *cli.Context, file string) {
 
 	for _, fileContent := range files {
 
-		m, err := getYamlInfo(fileContent)
+		m, err := getYamlInfo(fileContent, cleanupGoTemplate)
 		if err != nil {
 			log.Warnf("Ignoring %v", err)
 		}

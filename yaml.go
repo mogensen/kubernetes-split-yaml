@@ -7,14 +7,15 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-func getYamlInfo(yamlContent string) (*KubernetesAPI, error) {
+func getYamlInfo(yamlContent string, cleanupGoTemplate bool) (*KubernetesAPI, error) {
 
 	// Start by removing all lines with templating in to create sane yaml
 	cleanYaml := ""
 	for _, line := range strings.Split(yamlContent, "\n") {
-		if !strings.Contains(line, "{{") {
-			cleanYaml += line + "\n"
+		if cleanupGoTemplate && strings.Contains(line, "{{") {
+			continue
 		}
+		cleanYaml += line + "\n"
 	}
 
 	var m KubernetesAPI

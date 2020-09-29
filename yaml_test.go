@@ -7,7 +7,8 @@ import (
 
 func Test_getYamlInfo(t *testing.T) {
 	type args struct {
-		yamlContent string
+		yamlContent       string
+		cleanupGoTemplate bool
 	}
 	tests := []struct {
 		name          string
@@ -15,13 +16,15 @@ func Test_getYamlInfo(t *testing.T) {
 		wantKind      string
 		wantName      string
 		wantNamespace string
+		wantSource    string
 		wantErr       bool
 		wantErrMsg    string
 	}{
 		{
 			name: "Error on empty file",
 			args: args{
-				yamlContent: "",
+				yamlContent:       "",
+				cleanupGoTemplate: true,
 			},
 			wantKind:   "",
 			wantName:   "",
@@ -31,7 +34,8 @@ func Test_getYamlInfo(t *testing.T) {
 		{
 			name: "Error on non-yaml file",
 			args: args{
-				yamlContent: "Non-yaml file....?",
+				yamlContent:       "Non-yaml file....?",
+				cleanupGoTemplate: true,
 			},
 			wantErr:    true,
 			wantErrMsg: "Could not unmarshal",
@@ -66,15 +70,34 @@ metadata:
   name: simple
   namespace: foo
 `,
+				cleanupGoTemplate: true,
 			},
 			wantName:      "simple",
 			wantNamespace: "foo",
 			wantKind:      "Pod",
 		},
+		{
+			name: "Don't remove lines with '{{' from YAML input",
+			args: args{
+				yamlContent: `
+apiVersion: v1
+kind: Foo
+metadata:
+  name: simple
+  labels:
+    source: "{{ blah }}"
+`,
+				cleanupGoTemplate: false,
+			},
+			wantName:      "simple",
+			wantNamespace: "",
+			wantKind:      "Foo",
+			wantSource:    "{{ blah }}",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := getYamlInfo(tt.args.yamlContent)
+			got, err := getYamlInfo(tt.args.yamlContent, tt.args.cleanupGoTemplate)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("getYamlInfo() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -92,6 +115,9 @@ metadata:
 			}
 			if got.Metadata.Name != tt.wantName {
 				t.Errorf("getYamlInfo() got = %v, want %v", got.Metadata.Name, tt.wantName)
+			}
+			if got.Metadata.Labels.Source != tt.wantSource {
+				t.Errorf("getYamlInfo() got = %v, want %v", got.Metadata.Labels.Source, tt.wantSource)
 			}
 		})
 	}
