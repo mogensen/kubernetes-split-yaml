@@ -7,9 +7,9 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
-	"github.com/urfave/cli/v2"
 	"text/template"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 func Test_outFile(t *testing.T) {
@@ -155,41 +155,39 @@ func runTest(t *testing.T, in, out string) {
 
 		f := filepath.Base(in)
 
-		dir, err := ioutil.TempDir(os.TempDir(), f+"-")
+		outDir, err := ioutil.TempDir(os.TempDir(), f+"-")
 		if err != nil {
 			log.Fatal(err)
 		}
-		defer os.RemoveAll(dir)
+		defer os.RemoveAll(outDir)
 
-		app := cli.NewApp()
-		app.Flags = appFlags
-		app.Action = func(c *cli.Context) error {
-			handleFile(c, in)
+		handleFile(in, outDir, TemplateFlat, &Filters{})
 
-			wantFiles, err := filepath.Glob(filepath.Join(out, "*"))
-			if err != nil {
-				t.Errorf("could not find test files: %v", err)
+		wantFiles, err := filepath.Glob(filepath.Join(out, "*"))
+		if err != nil {
+			t.Errorf("could not find test files: %v", err)
+		}
+		gotFiles, err := filepath.Glob(filepath.Join(outDir, "*"))
+		if err != nil {
+			t.Errorf("could not find result files: %v", err)
+		}
+
+		if len(gotFiles) != len(wantFiles) {
+			t.Errorf("handleFile() = %v, want %v", len(gotFiles), len(wantFiles))
+		}
+		t.Logf("wantFiles: %s", wantFiles)
+
+		for _, wantFile := range wantFiles {
+			fileName := filepath.Base(wantFile)
+			want, _ := ioutil.ReadFile(wantFile)
+			generatedFileName := filepath.Join(outDir, filepath.Base(wantFile))
+
+			t.Logf("Validating content of file: \n - Generated: %s\n - GoldenTest: %s", generatedFileName, wantFile)
+
+			got, _ := ioutil.ReadFile(generatedFileName)
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf(fileName + "\n" + cmp.Diff(string(got), string(want)))
 			}
-			gotFiles, err := filepath.Glob(filepath.Join(dir, "*"))
-			if err != nil {
-				t.Errorf("could not find result files: %v", err)
-			}
-
-			if len(gotFiles) != len(wantFiles) {
-				t.Errorf("handleFile() = %v, want %v", len(gotFiles), len(wantFiles))
-			}
-
-			for _, wantFile := range wantFiles {
-				fileName := filepath.Base(wantFile)
-
-				want, _ := ioutil.ReadFile(wantFile)
-				got, _ := ioutil.ReadFile(filepath.Join(dir, filepath.Base(wantFile)))
-
-				if !reflect.DeepEqual(got, want) {
-					t.Errorf(fileName + "\n" + cmp.Diff(string(got), string(want)))
-				}
-			}
-			return nil
 		}
 	})
 }
