@@ -1,12 +1,11 @@
 package main
 
 import (
-	"io/ioutil"
-	"path/filepath"
-
 	"bytes"
 	"fmt"
+	"io/ioutil"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"text/template"
@@ -75,6 +74,12 @@ var appFlags = []cli.Flag{
 		Value: FileRe,
 		Usage: "final output file regex to match",
 	},
+	&cli.StringFlag{
+		Name:      "custom_sn_map",
+		Value:     "",
+		TakesFile: true,
+		Usage:     "Resource definitions short names custom map",
+	},
 }
 
 type Filters struct {
@@ -90,7 +95,6 @@ func main() {
 	app.Usage = "Split the 'giant yaml file' into one file pr kubernetes resource"
 	app.Flags = appFlags
 	app.Action = func(c *cli.Context) error {
-
 		outdir := c.String("outdir")
 		templateSel := c.String("template_sel")
 		outfileTemplate := c.String(templateSel)
@@ -100,8 +104,9 @@ func main() {
 			kind:      c.String("kind_re"),
 			filename:  c.String("file_re"),
 		}
+		customShortnameMapFilePath := c.String("custom_sn_map")
 
-		handleFile(c.Args().Get(0), outdir, outfileTemplate, filters)
+		handleFile(c.Args().Get(0), outdir, outfileTemplate, customShortnameMapFilePath, filters)
 		return nil
 	}
 
@@ -111,8 +116,7 @@ func main() {
 	}
 }
 
-func outFile(outdir string, t *template.Template, filters *Filters, m *KubernetesAPI) (string, error) {
-
+func outFile(outdir string, t *template.Template, filters *Filters, m *KubernetesAPI, shortnameMap shortNameMap) (string, error) {
 	ns := m.Metadata.Namespace
 	if ns == "" {
 		ns = "_no_ns_"
@@ -121,7 +125,7 @@ func outFile(outdir string, t *template.Template, filters *Filters, m *Kubernete
 	// Setup  m.X. "extended" template-convienent fields
 	m.X.Outdir = outdir
 	m.X.NS = ns
-	m.X.ShortKind = getShortName(m.Kind)
+	m.X.ShortKind = getShortName(m.Kind, shortnameMap)
 
 	buf := new(bytes.Buffer)
 	err := t.Execute(buf, m)
@@ -163,11 +167,19 @@ func outFile(outdir string, t *template.Template, filters *Filters, m *Kubernete
 	return filename, nil
 }
 
-func handleFile(file, outdir, outfileTemplate string, filters *Filters) {
-
+func handleFile(file, outdir, outfileTemplate, customShortnameMapFilePath string, filters *Filters) {
 	tpl, err := template.New("outfile").Parse(outfileTemplate)
 	if err != nil {
 		log.Fatalf("Failed create template from '%s'", outfileTemplate)
+	}
+
+	var shortNameMap shortNameMap
+
+	if customShortnameMapFilePath != "" {
+		shortNameMap, err = loadCustomShortnameMapFile(customShortnameMapFilePath)
+		if err != nil {
+			log.Fatalf("Failed to load custom shortname map file '%s': %v", customShortnameMapFilePath, err)
+		}
 	}
 
 	files := readAndSplitFile(file)
@@ -180,7 +192,7 @@ func handleFile(file, outdir, outfileTemplate string, filters *Filters) {
 			continue
 		}
 
-		filename, err := outFile(outdir, tpl, filters, m)
+		filename, err := outFile(outdir, tpl, filters, m, shortNameMap)
 		if err != nil {
 			log.Fatalf("Failed on outFile: %v", err)
 		}
