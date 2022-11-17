@@ -1,29 +1,57 @@
 package main
 
-import "strings"
+import (
+	"encoding/json"
+	"os"
+	"strings"
+)
 
-func getShortName(kind string) string {
-	switch strings.ToLower(kind) {
-	case "service":
-		return "svc"
-	case "serviceaccount":
-		return "sa"
-	case "rolebinding":
-		return "rb"
-	case "clusterrolebinding":
-		return "crb"
-	case "clusterrole":
-		return "cr"
-	case "horizontalpodautoscaler":
-		return "hpa"
-	case "poddisruptionbudget":
-		return "pdb"
-	case "customresourcedefinition":
-		return "crd"
-	case "configmap":
-		return "cm"
+type shortNameMap map[string]string
+
+func getShortName(kind string, shortNameMap shortNameMap) string {
+	if shortNameMap == nil {
+		shortNameMap = getDefaultShortNameMap()
 	}
 
-	return strings.ToLower(kind)
+	kindLower := strings.ToLower(kind)
 
+	shortname, exists := shortNameMap[kindLower]
+	if !exists {
+		return kindLower
+	}
+
+	return shortname
+}
+
+func getDefaultShortNameMap() shortNameMap {
+	return shortNameMap{
+		"service":                  "svc",
+		"serviceaccount":           "sa",
+		"rolebinding":              "rb",
+		"clusterrolebinding":       "crb",
+		"clusterrole":              "cr",
+		"horizontalpodautoscaler":  "hpa",
+		"poddisruptionbudget":      "pdb",
+		"customresourcedefinition": "crd",
+		"configmap":                "cm",
+	}
+}
+
+func loadCustomShortnameMapFile(path string) (shortNameMap, error) {
+	customShortnameMapFile, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+
+	defer customShortnameMapFile.Close()
+
+	decoder := json.NewDecoder(customShortnameMapFile)
+
+	shortnameMap := getDefaultShortNameMap()
+
+	if err := decoder.Decode(&shortnameMap); err != nil {
+		return nil, err
+	}
+
+	return shortnameMap, nil
 }

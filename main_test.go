@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"reflect"
 	"testing"
-
 	"text/template"
 
 	"github.com/google/go-cmp/cmp"
@@ -128,7 +127,7 @@ func Test_outFile(t *testing.T) {
 				namespace: tt.namespaceRe,
 				filename:  tt.fileRe,
 			}
-			got, err := outFile(tt.outdir, tpl, filters, m)
+			got, err := outFile(tt.outdir, tpl, filters, m, nil)
 			if got != tt.fileExp {
 				t.Errorf("outFile() got = '%v', want '%v'", got, tt.fileExp)
 			}
@@ -137,10 +136,8 @@ func Test_outFile(t *testing.T) {
 }
 
 func Test_handleFile(t *testing.T) {
-
 	// determine input files
 	match, err := filepath.Glob("testdata/*.yaml")
-
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -150,9 +147,9 @@ func Test_handleFile(t *testing.T) {
 		runTest(t, in, out)
 	}
 }
+
 func runTest(t *testing.T, in, out string) {
 	t.Run(in, func(t *testing.T) {
-
 		f := filepath.Base(in)
 
 		outDir, err := ioutil.TempDir(os.TempDir(), f+"-")
@@ -161,7 +158,7 @@ func runTest(t *testing.T, in, out string) {
 		}
 		defer os.RemoveAll(outDir)
 
-		handleFile(in, outDir, TemplateFlat, &Filters{})
+		handleFile(in, outDir, TemplateFlat, "", &Filters{})
 
 		wantFiles, err := filepath.Glob(filepath.Join(out, "*"))
 		if err != nil {
