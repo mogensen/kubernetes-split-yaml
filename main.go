@@ -80,6 +80,10 @@ var appFlags = []cli.Flag{
 		TakesFile: true,
 		Usage:     "Resource definitions short names custom map",
 	},
+    &cli.BoolFlag{
+        Name:   "quiet",
+        Usage:  "Quiet the output, no output of files created",
+    },
 }
 
 type Filters struct {
@@ -105,8 +109,9 @@ func main() {
 			filename:  c.String("file_re"),
 		}
 		customShortnameMapFilePath := c.String("custom_sn_map")
+		quietMode := c.Bool("quiet")
 
-		handleFile(c.Args().Get(0), outdir, outfileTemplate, customShortnameMapFilePath, filters)
+		handleFile(c.Args().Get(0), outdir, outfileTemplate, customShortnameMapFilePath, filters, quietMode)
 		return nil
 	}
 
@@ -167,7 +172,7 @@ func outFile(outdir string, t *template.Template, filters *Filters, m *Kubernete
 	return filename, nil
 }
 
-func handleFile(file, outdir, outfileTemplate, customShortnameMapFilePath string, filters *Filters) {
+func handleFile(file, outdir, outfileTemplate, customShortnameMapFilePath string, filters *Filters, quietMode bool) {
 	tpl, err := template.New("outfile").Parse(outfileTemplate)
 	if err != nil {
 		log.Fatalf("Failed create template from '%s'", outfileTemplate)
@@ -188,7 +193,9 @@ func handleFile(file, outdir, outfileTemplate, customShortnameMapFilePath string
 
 		m, err := getYamlInfo(fileContent)
 		if err != nil {
-			log.Warnf("Ignoring %v", err)
+		    if !quietMode {
+			    log.Warnf("Ignoring %v", err)
+			}
 			continue
 		}
 
@@ -200,7 +207,9 @@ func handleFile(file, outdir, outfileTemplate, customShortnameMapFilePath string
 			continue
 		}
 
-		log.Infof("Creating file: %s", filename)
+        if !quietMode {
+		    log.Infof("Creating file: %s", filename)
+		}
 		fileDir := filepath.Dir(filename)
 		err = os.MkdirAll(fileDir, os.ModePerm)
 		if err != nil {
